@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Evolua",
+    "slug": "evolua",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": { "supportsTablet": true },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": { "favicon": "./assets/favicon.png" },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Evolua acessa uma foto quando você escolhe adicioná-la à sua trilha.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "O Evolua usa a galeria apenas para salvar as fotos que você escolher preservar.",
+          "savePhotosPermission": "O Evolua salva na galeria as fotos que você escolher preservar.",
+          "granularPermissions": ["photo"]
+        }
+      ]
+    ]
+  }
+}
