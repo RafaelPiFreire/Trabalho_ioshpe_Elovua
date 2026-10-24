@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import Login from './src/screens/Login';
 import Home from './src/screens/Home';
 import Trilha from './src/screens/Trilha';
+import NewTrilha from './src/screens/NewTrilha';
 import Sobre from './src/screens/Sobre';
 import { contas } from './src/services/armazenamento';
 import { avisar } from './src/utils/alerta';
@@ -91,7 +92,13 @@ export default function App() {
           {() => <Home usuario={usuario} />}
         </Tab.Screen>
         <Tab.Screen name="Trilha" options={{ title: 'Trilha', tabBarLabel: 'Trilha' }}>
-          {() => <Trilha usuario={usuario} />}
+          {(props) => <Trilha usuario={usuario} {...props} />}
+        </Tab.Screen>
+        <Tab.Screen
+          name="NewTrilha"
+          options={{ title: 'Nova trilha', tabBarButton: () => null, tabBarStyle: { display: 'none' } }}
+        >
+          {(props) => <NewTrilha usuario={usuario} {...props} />}
         </Tab.Screen>
         <Tab.Screen name="Sobre" component={Sobre} options={{ title: 'Sobre o Evolua', tabBarLabel: 'Sobre' }} />
       </Tab.Navigator>

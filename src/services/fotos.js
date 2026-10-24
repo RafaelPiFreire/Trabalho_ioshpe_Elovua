@@ -12,20 +12,54 @@ function caminhoSeguro(valor) {
   return String(valor).replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
+function criarUriDaFotoWeb(asset) {
+  if (typeof asset.base64 !== 'string' || !asset.base64) {
+    throw new Error('O navegador não conseguiu preparar a foto para salvá-la na trilha.');
+  }
+  const tipo = asset.mimeType || 'image/jpeg';
+  const uriOriginal = `data:${tipo};base64,${asset.base64}`;
+  if (typeof Image === 'undefined' || typeof document === 'undefined') return uriOriginal;
+
+  return new Promise((resolve, reject) => {
+    const imagem = new Image();
+    imagem.onload = () => {
+      const escala = Math.min(1, 1280 / Math.max(imagem.naturalWidth, imagem.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(imagem.naturalWidth * escala));
+      canvas.height = Math.max(1, Math.round(imagem.naturalHeight * escala));
+      const contexto = canvas.getContext('2d');
+      if (!contexto) {
+        reject(new Error('Não foi possível preparar a foto neste navegador.'));
+        return;
+      }
+      contexto.drawImage(imagem, 0, 0, canvas.width, canvas.height);
+      const uriCompacta = canvas.toDataURL('image/jpeg', 0.75);
+      if (!uriCompacta.startsWith('data:image/jpeg;base64,')) {
+        reject(new Error('Não foi possível preparar a foto neste navegador.'));
+        return;
+      }
+      resolve(uriCompacta);
+    };
+    imagem.onerror = () => reject(new Error('Não foi possível abrir a foto selecionada no navegador.'));
+    imagem.src = uriOriginal;
+  });
+}
+
 export function criarFotos({ trilhas, imagePicker, fileSystem, mediaLibrary, obterAgora = () => new Date() }) {
   async function selecionarEAdicionar(email, hobbyId) {
     const hobbies = await trilhas.lerHobbies(email);
-    const hobby = hobbies.find((item) => item.id === hobbyId);
-    if (!hobby) throw new Error('Esse hobby não foi encontrado.');
-    const hoje = trilhas.obterResumo(hobby, obterAgora()).data;
-    if (hobby.fotos.some((foto) => foto.data === hoje)) {
-      throw new Error('Você já adicionou uma foto para este hobby hoje.');
+    const habilidades = hobbies.find((item) => item.id === hobbyId);
+    if (!habilidades) throw new Error('Esse habilidades não foi encontrado.');
+    const hoje = trilhas.obterResumo(habilidades, obterAgora()).data;
+    if (habilidades.fotos.some((foto) => foto.data === hoje)) {
+      throw new Error('Você já adicionou uma foto para este habilidades hoje.');
     }
 
     const resultado = await imagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: false,
       quality: 0.8,
+      base64: !fileSystem.documentDirectory,
     });
     if (resultado.canceled) return { cancelada: true };
     const asset = resultado.assets?.[0];
@@ -34,7 +68,9 @@ export function criarFotos({ trilhas, imagePicker, fileSystem, mediaLibrary, obt
     }
 
     if (!fileSystem.documentDirectory) {
-      throw new Error('O armazenamento de fotos não está disponível neste dispositivo.');
+      const uriLocal = await criarUriDaFotoWeb(asset);
+      const resultadoRegistro = await trilhas.adicionarFoto(email, hobbyId, uriLocal);
+      return { cancelada: false, habilidades: resultadoRegistro.habilidades };
     }
     const pasta = `${fileSystem.documentDirectory}evolua-fotos/`;
     const infoPasta = await fileSystem.getInfoAsync(pasta);
@@ -65,7 +101,7 @@ export function criarFotos({ trilhas, imagePicker, fileSystem, mediaLibrary, obt
         );
       }
 
-      return { cancelada: false, hobby: resultadoRegistro.hobby };
+      return { cancelada: false, habilidades: resultadoRegistro.habilidades };
     } catch (erro) {
       if (!registrada) {
         try {
@@ -82,9 +118,9 @@ export function criarFotos({ trilhas, imagePicker, fileSystem, mediaLibrary, obt
 
   async function salvarNaGaleria(email, hobbyId, fotoId) {
     const hobbies = await trilhas.lerHobbies(email);
-    const hobby = hobbies.find((item) => item.id === hobbyId);
-    if (!hobby) throw new Error('Esse hobby não foi encontrado.');
-    const foto = hobby.fotos.find((item) => item.id === fotoId);
+    const habilidades = hobbies.find((item) => item.id === hobbyId);
+    if (!habilidades) throw new Error('Esse habilidades não foi encontrado.');
+    const foto = habilidades.fotos.find((item) => item.id === fotoId);
     if (!foto) throw new Error('Essa foto não está mais entre as fotos recentes.');
     if (foto.galeria) return { jaSalva: true, foto };
 

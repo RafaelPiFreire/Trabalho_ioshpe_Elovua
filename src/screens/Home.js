@@ -29,9 +29,9 @@ export default function Home({ usuario }) {
     }, [usuario.email, tentativa])
   );
 
-  const resumos = hobbies.map((hobby) => ({
-    hobby,
-    resumo: trilhas.obterResumo(hobby),
+  const resumos = hobbies.map((habilidades) => ({
+    habilidades,
+    resumo: trilhas.obterResumo(habilidades),
   }));
 
   return (
@@ -54,7 +54,7 @@ export default function Home({ usuario }) {
           <View style={styles.resumoTexto}>
             <Text style={styles.resumoValor}>{hobbies.length}</Text>
             <Text style={styles.resumoRotulo}>
-              {hobbies.length === 1 ? 'hobby acompanhado' : 'hobbies acompanhados'}
+              {hobbies.length === 1 ? 'habilidades acompanhado' : 'hobbies acompanhados'}
             </Text>
           </View>
           <Text style={styles.resumoNota}>Cada um tem sua própria trilha</Text>
@@ -89,14 +89,14 @@ export default function Home({ usuario }) {
             <View style={styles.iconeVazio}>
               <Feather name="compass" size={25} color={cores.primaria} />
             </View>
-            <Text style={styles.vazioTitulo}>Seu próximo hobby começa aqui</Text>
+            <Text style={styles.vazioTitulo}>Seu próximo habilidades começa aqui</Text>
             <Text style={styles.textoSuave}>
               Escolha algo que você gostaria de praticar e crie uma trilha simples para acompanhar seus passos.
             </Text>
             <TouchableOpacity
               accessibilityRole="button"
               style={styles.botaoPrimario}
-              onPress={() => navigation.navigate('Trilha')}
+              onPress={() => navigation.navigate('NewTrilha')}
             >
               <Feather name="plus" size={17} color="#FFFFFF" />
               <Text style={styles.botaoPrimarioTexto}>Criar minha primeira trilha</Text>
@@ -104,9 +104,9 @@ export default function Home({ usuario }) {
           </View>
         ) : (
           <View style={styles.lista}>
-            {resumos.map(({ hobby, resumo }) => (
+            {resumos.map(({ habilidades, resumo }) => (
               <TouchableOpacity
-                key={hobby.id}
+                key={habilidades.id}
                 accessibilityRole="button"
                 onPress={() => navigation.navigate('Trilha')}
                 style={styles.cartaoHobby}
@@ -115,7 +115,7 @@ export default function Home({ usuario }) {
                   <Feather name="activity" size={19} color={cores.primaria} />
                 </View>
                 <View style={styles.hobbyInfo}>
-                  <Text style={styles.hobbyNome}>{hobby.nome}</Text>
+                  <Text style={styles.hobbyNome}>{habilidades.nome}</Text>
                   <Text style={styles.hobbyDias}>
                     {resumo.diasPlanejados.length} {resumo.diasPlanejados.length === 1 ? 'dia planejado' : 'dias planejados'} por semana
                   </Text>
@@ -144,6 +144,15 @@ export default function Home({ usuario }) {
             <Text style={styles.botaoPrimarioTexto}>Abrir minhas trilhas</Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity
+            accessibilityRole="button"
+            style={styles.botaoPrimario}
+            onPress={() => navigation.navigate('NewTrilha')}
+          >
+            <Feather name="map" size={17} color="#FFFFFF" />
+            <Text style={styles.botaoPrimarioTexto}>Criar nova Trilha</Text>
+          </TouchableOpacity>
 
         <View style={styles.mensagem}>
           <Feather name="wind" size={17} color="#0F766E" />

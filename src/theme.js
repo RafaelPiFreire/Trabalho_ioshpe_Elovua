@@ -7,4 +7,5 @@ export const cores = {
   borda: '#D8E0EC',
   erro: '#DC2626',
   sucesso: '#16A34A',
+  alerta: '#bb3a3a',
 };

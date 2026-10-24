@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { fotos, trilhas } from '../services/armazenamento';
 import { avisar } from '../utils/alerta';
@@ -55,13 +56,10 @@ function agruparAtividades(atividades, fotosRecentes, fotosPreservadas) {
     .map(([, etapa]) => etapa);
 }
 
-export default function Trilha({ usuario }) {
+export default function Trilha({ usuario, navigation, route }) {
   const [hobbies, setHobbies] = useState([]);
   const [selecionado, setSelecionado] = useState(null);
-  const [nomeNovo, setNomeNovo] = useState('');
-  const [diasNovos, setDiasNovos] = useState([]);
   const [diasEditados, setDiasEditados] = useState(null);
-  const [criando, setCriando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erroCarregamento, setErroCarregamento] = useState('');
@@ -73,7 +71,11 @@ export default function Trilha({ usuario }) {
     try {
       const lista = await trilhas.lerHobbies(usuario.email);
       setHobbies(lista);
-      setSelecionado((atual) => lista.some((hobby) => hobby.id === atual) ? atual : (lista[0]?.id || null));
+      setSelecionado((atual) => (
+        lista.some((habilidades) => habilidades.id === route.params?.hobbyId)
+          ? route.params.hobbyId
+          : lista.some((habilidades) => habilidades.id === atual) ? atual : (lista[0]?.id || null)
+      ));
       return true;
     } catch (erro) {
       setErroCarregamento('Não foi possível carregar seus hobbies salvos.');
@@ -82,11 +84,17 @@ export default function Trilha({ usuario }) {
     } finally {
       setCarregando(false);
     }
-  }, [usuario.email]);
+  }, [route.params?.hobbyId, usuario.email]);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  useFocusEffect(useCallback(() => {
+    carregar();
+  }, [carregar]));
 
-  const hobbyAtual = hobbies.find((hobby) => hobby.id === selecionado) || null;
+  useEffect(() => {
+    if (route.params?.hobbyId) navigation.setParams({ hobbyId: undefined });
+  }, [navigation, route.params?.hobbyId]);
+
+  const hobbyAtual = hobbies.find((habilidades) => habilidades.id === selecionado) || null;
   const resumo = hobbyAtual ? trilhas.obterResumo(hobbyAtual) : null;
   const configAtual = hobbyAtual?.configuracoes[hobbyAtual.configuracoes.length - 1];
   const historico = hobbyAtual
@@ -95,10 +103,32 @@ export default function Trilha({ usuario }) {
   const historicoVisivel = mostrarHistoricoCompleto ? historico : historico.slice(0, 5);
   const fotoHoje = hobbyAtual?.fotos.find((foto) => foto.data === resumo?.data) || null;
 
-  function alternarDia(setter, dias, dia) {
-    setter(dias.includes(dia)
-      ? dias.filter((item) => item !== dia)
-      : [...dias, dia]);
+  function diasSelecionados(dias) {
+    return (
+      <View style={styles.diasRow}>
+        {DIAS.map((dia) => {
+          const ativo = dias.includes(dia.valor);
+          return (
+            <TouchableOpacity
+              key={dia.valor}
+              accessibilityRole="button"
+              accessibilityLabel={`${dia.nome}${ativo ? ', selecionado' : ''}`}
+              accessibilityState={{ selected: ativo }}
+              disabled={salvando}
+              onPress={() => setDiasEditados((atuais) => {
+                const diasAtuais = atuais === null ? (configAtual?.dias || []) : atuais;
+                return diasAtuais.includes(dia.valor)
+                  ? diasAtuais.filter((item) => item !== dia.valor)
+                  : [...diasAtuais, dia.valor];
+              })}
+              style={[styles.diaPill, ativo && styles.diaPillAtivo]}
+            >
+              <Text style={[styles.diaTexto, ativo && styles.diaTextoAtivo]}>{dia.curto}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
   }
 
   async function executar(acao, sucesso) {
@@ -117,24 +147,6 @@ export default function Trilha({ usuario }) {
     }
   }
 
-  async function criarNovoHobby() {
-    if (salvando) return;
-    setSalvando(true);
-    try {
-      const novo = await trilhas.criarHobby(usuario.email, nomeNovo, diasNovos);
-      const lista = await trilhas.lerHobbies(usuario.email);
-      setHobbies(lista);
-      setSelecionado(novo.id);
-      setNomeNovo('');
-      setDiasNovos([]);
-      setCriando(false);
-    } catch (erro) {
-      avisar('Não foi possível criar', erro?.message || 'Tente novamente.');
-    } finally {
-      setSalvando(false);
-    }
-  }
-
   async function adicionarFoto() {
     if (salvando || !hobbyAtual) return;
     setSalvando(true);
@@ -145,7 +157,7 @@ export default function Trilha({ usuario }) {
       avisar(
         'Foto registrada',
         resumo.praticaPlanejadaHoje
-          ? 'A foto foi salva e a prática do dia foi registrada para este hobby.'
+          ? 'A foto foi salva e a prática do dia foi registrada para este habilidades.'
           : 'A foto e a prática foram salvas. Hoje é descanso planejado, então sua sequência segue no mesmo ritmo.',
       );
     } catch (erro) {
@@ -176,29 +188,6 @@ export default function Trilha({ usuario }) {
     }
   }
 
-  function diasSelecionados(dias, setter) {
-    return (
-      <View style={styles.diasRow}>
-        {DIAS.map((dia) => {
-          const ativo = dias.includes(dia.valor);
-          return (
-            <TouchableOpacity
-              key={dia.valor}
-              accessibilityRole="button"
-              accessibilityLabel={`${dia.nome}${ativo ? ', selecionado' : ''}`}
-              accessibilityState={{ selected: ativo }}
-              disabled={salvando}
-              onPress={() => alternarDia(setter, dias, dia.valor)}
-              style={[styles.diaPill, ativo && styles.diaPillAtivo]}
-            >
-              <Text style={[styles.diaTexto, ativo && styles.diaTextoAtivo]}>{dia.curto}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    );
-  }
-
   if (carregando) {
     return (
       <View style={styles.estadoCarregando}>
@@ -216,7 +205,7 @@ export default function Trilha({ usuario }) {
             <Feather name="trending-up" size={22} color={cores.primaria} />
           </View>
           <Text style={styles.saudacao}>Seu próximo passo</Text>
-          <Text style={styles.titulo}>Uma trilha para cada hobby</Text>
+          <Text style={styles.titulo}>Uma trilha para cada habilidades</Text>
           <Text style={styles.data}>{formatarHoje()}</Text>
         </View>
 
@@ -227,16 +216,16 @@ export default function Trilha({ usuario }) {
               <Text style={styles.botaoSecundarioTexto}>Tentar novamente</Text>
             </TouchableOpacity>
           </View>
-        ) : hobbies.length === 0 && !criando ? (
+        ) : hobbies.length === 0 ? (
           <View style={[styles.cartao, styles.vazio]}>
             <View style={styles.iconeVazio}><Feather name="map" size={27} color={cores.primaria} /></View>
             <Text style={styles.tituloCartao}>Toda evolução começa pequeno</Text>
             <Text style={styles.textoSuave}>
               Crie sua primeira trilha e escolha os dias em que quer praticar. Seu progresso fica salvo neste aparelho.
             </Text>
-            <TouchableOpacity style={styles.botaoPrimario} onPress={() => setCriando(true)}>
+            <TouchableOpacity style={styles.botaoPrimario} onPress={() => navigation.navigate('NewTrilha')}>
               <Feather name="plus" size={18} color="#FFFFFF" />
-              <Text style={styles.botaoPrimarioTexto}>Criar meu primeiro hobby</Text>
+              <Text style={styles.botaoPrimarioTexto}>Criar meu primeiro habilidades</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -244,26 +233,26 @@ export default function Trilha({ usuario }) {
         {hobbies.length > 0 && (
           <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.listaHobbies}>
-              {hobbies.map((hobby) => (
+              {hobbies.map((habilidades) => (
                 <TouchableOpacity
-                  key={hobby.id}
+                  key={habilidades.id}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: hobby.id === selecionado }}
+                  accessibilityState={{ selected: habilidades.id === selecionado }}
                   onPress={() => {
-                    setSelecionado(hobby.id);
+                    setSelecionado(habilidades.id);
                     setDiasEditados(null);
                     setMostrarHistoricoCompleto(false);
                   }}
-                  style={[styles.hobbyPill, hobby.id === selecionado && styles.hobbyPillAtivo]}
+                  style={[styles.hobbyPill, habilidades.id === selecionado && styles.hobbyPillAtivo]}
                 >
-                  <Text style={[styles.hobbyPillTexto, hobby.id === selecionado && styles.hobbyPillTextoAtivo]}>
-                    {hobby.nome}
+                  <Text style={[styles.hobbyPillTexto, habilidades.id === selecionado && styles.hobbyPillTextoAtivo]}>
+                    {habilidades.nome}
                   </Text>
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity style={styles.adicionarPill} onPress={() => setCriando((valor) => !valor)}>
-                <Feather name={criando ? 'x' : 'plus'} size={16} color={cores.primaria} />
-                <Text style={styles.adicionarPillTexto}>{criando ? 'Fechar' : 'Novo hobby'}</Text>
+              <TouchableOpacity style={styles.adicionarPill} onPress={() => navigation.navigate('NewTrilha')}>
+                <Feather name="plus" size={16} color={cores.primaria} />
+                <Text style={styles.adicionarPillTexto}>Nova habilidade</Text>
               </TouchableOpacity>
             </ScrollView>
 
@@ -320,6 +309,8 @@ export default function Trilha({ usuario }) {
                                   <Text style={styles.fotoTitulo}>Foto do dia</Text>
                                   {etapa.foto.galeria ? (
                                     <Text style={styles.fotoPreservada}>Cópia salva na galeria</Text>
+                                  ) : Platform.OS === 'web' ? (
+                                    <Text style={styles.fotoPreservada}>Foto guardada na trilha deste navegador</Text>
                                   ) : (
                                     <TouchableOpacity
                                       accessibilityRole="button"
@@ -362,10 +353,7 @@ export default function Trilha({ usuario }) {
                     </View>
                     <Feather name="calendar" size={20} color={cores.primaria} />
                   </View>
-                  {diasSelecionados(
-                    diasEditados === null ? (configAtual?.dias || []) : diasEditados,
-                    (novosDias) => setDiasEditados(novosDias),
-                  )}
+                  {diasSelecionados(diasEditados === null ? (configAtual?.dias || []) : diasEditados)}
                   <Text style={styles.dica}>
                     Dias sem marcação são descanso planejado. Uma sequência não precisa ser perfeita.
                   </Text>
@@ -394,7 +382,7 @@ export default function Trilha({ usuario }) {
                     {resumo.quantidadeHoje > 0
                       ? `Você já registrou ${resumo.quantidadeHoje} ${resumo.quantidadeHoje === 1 ? 'atividade' : 'atividades'} hoje.`
                       : resumo.praticaPlanejadaHoje
-                        ? 'Fez algo por esse hobby hoje? Marque sua prática.'
+                        ? 'Fez algo por esse habilidades hoje? Marque sua prática.'
                         : 'Hoje é um dia livre no seu ritmo. Se praticar, você também pode registrar.'}
                   </Text>
                   <TouchableOpacity
@@ -419,6 +407,8 @@ export default function Trilha({ usuario }) {
                           <Text style={styles.fotoTitulo}>Sua foto está salva neste aparelho</Text>
                           {fotoHoje.galeria ? (
                             <Text style={styles.fotoPreservada}>Cópia independente na galeria</Text>
+                          ) : Platform.OS === 'web' ? (
+                            <Text style={styles.fotoPreservada}>Foto guardada na trilha deste navegador</Text>
                           ) : (
                             <TouchableOpacity
                               accessibilityRole="button"
@@ -457,33 +447,6 @@ export default function Trilha({ usuario }) {
           </>
         )}
 
-        {criando && (
-          <View style={styles.cartao}>
-            <Text style={styles.tituloCartao}>Novo hobby</Text>
-            <TextInput
-              accessibilityLabel="Nome do hobby"
-              style={styles.input}
-              placeholder="Ex.: desenho, leitura, música"
-              placeholderTextColor="#94A3B8"
-              value={nomeNovo}
-              onChangeText={setNomeNovo}
-              maxLength={50}
-              editable={!salvando}
-              returnKeyType="done"
-              onSubmitEditing={criarNovoHobby}
-            />
-            <Text style={styles.rotuloDias}>Quais dias você quer praticar?</Text>
-            {diasSelecionados(diasNovos, setDiasNovos)}
-            <Text style={styles.dica}>Você pode mudar seus dias depois, sem apagar o histórico.</Text>
-            <TouchableOpacity
-              disabled={salvando}
-              style={[styles.botaoPrimario, salvando && styles.botaoDesativado]}
-              onPress={criarNovoHobby}
-            >
-              {salvando ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.botaoPrimarioTexto}>Criar trilha</Text>}
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     </ScrollView>
   );
@@ -552,8 +515,6 @@ const styles = StyleSheet.create({
   fotoPreservada: { color: '#15803D', fontSize: 12, fontWeight: '600', marginTop: 4 },
   botaoGaleria: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 5 },
   linkGaleria: { color: cores.primaria, fontWeight: '700', fontSize: 12 },
-  input: { height: 48, borderWidth: 1, borderColor: cores.borda, borderRadius: 11, paddingHorizontal: 13, color: cores.texto, marginTop: 10 },
-  rotuloDias: { color: cores.texto, fontWeight: '600', fontSize: 14, marginTop: 18 },
   estadoCarregando: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: cores.fundo },
   mensagemErro: { color: cores.erro, fontSize: 14, lineHeight: 21 },
 });

@@ -190,13 +190,13 @@ test('trilhas criam hobbies isolados por usuário e persistem após nova instân
   const arm = memoria();
   const relogio = relogioLocal(2026, 10, 12);
   const t = criarTrilhas(arm, relogio.obter);
-  const hobby = await t.criarHobby('ana@x.com', 'Desenho', [1, 3, 5]);
+  const habilidades = await t.criarHobby('ana@x.com', 'Desenho', [1, 3, 5]);
   await t.criarHobby('bia@x.com', 'Leitura', [2, 4]);
 
   const reaberto = criarTrilhas(arm, relogio.obter);
   assert.deepEqual((await reaberto.lerHobbies('ANA@x.com')).map((item) => item.nome), ['Desenho']);
   assert.equal((await reaberto.lerHobbies('bia@x.com')).length, 1);
-  assert.equal((await reaberto.lerHobbies('ana@x.com'))[0].id, hobby.id);
+  assert.equal((await reaberto.lerHobbies('ana@x.com'))[0].id, habilidades.id);
   assert.ok(arm._m.has(CHAVE_TRILHAS + 'ana@x.com'));
 });
 
@@ -204,17 +204,17 @@ test('foguinho conta dias planejados, ignora descansos e não multiplica ativida
   const arm = memoria();
   const relogio = relogioLocal(2026, 10, 12); // segunda-feira
   const t = criarTrilhas(arm, relogio.obter);
-  const hobby = await t.criarHobby('ana@x.com', 'Desenho', [1, 3, 5]);
+  const habilidades = await t.criarHobby('ana@x.com', 'Desenho', [1, 3, 5]);
 
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
   relogio.definir(2026, 10, 13); // descanso
   assert.equal(t.obterResumo((await t.lerHobbies('ana@x.com'))[0]).sequenciaAtual, 1);
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
   assert.equal(t.obterResumo((await t.lerHobbies('ana@x.com'))[0]).sequenciaAtual, 1);
 
   relogio.definir(2026, 10, 14); // quarta-feira
-  await t.registrarAtividade('ana@x.com', hobby.id);
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
   const resumo = t.obterResumo((await t.lerHobbies('ana@x.com'))[0]);
   assert.equal(resumo.sequenciaAtual, 2);
   assert.equal(resumo.recorde, 2);
@@ -225,8 +225,8 @@ test('dia planejado perdido interrompe a sequência e a próxima prática inicia
   const arm = memoria();
   const relogio = relogioLocal(2026, 10, 12);
   const t = criarTrilhas(arm, relogio.obter);
-  const hobby = await t.criarHobby('ana@x.com', 'Leitura', [1, 3, 4, 5]);
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  const habilidades = await t.criarHobby('ana@x.com', 'Leitura', [1, 3, 4, 5]);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
 
   relogio.definir(2026, 10, 14); // quarta-feira planejada, ainda não encerrada
   let atual = (await t.lerHobbies('ana@x.com'))[0];
@@ -235,7 +235,7 @@ test('dia planejado perdido interrompe a sequência e a próxima prática inicia
   relogio.definir(2026, 10, 15); // quinta: quarta-feira já encerrou
   atual = (await t.lerHobbies('ana@x.com'))[0];
   assert.equal(t.obterResumo(atual).sequenciaAtual, 0);
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
   atual = (await t.lerHobbies('ana@x.com'))[0];
   assert.equal(t.obterResumo(atual).sequenciaAtual, 1);
   assert.equal(t.obterResumo(atual).recorde, 1);
@@ -245,10 +245,10 @@ test('mudanças na frequência preservam configurações e recorde anteriores', 
   const arm = memoria();
   const relogio = relogioLocal(2026, 10, 12);
   const t = criarTrilhas(arm, relogio.obter);
-  const hobby = await t.criarHobby('ana@x.com', 'Música', [1, 3, 5]);
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  const habilidades = await t.criarHobby('ana@x.com', 'Música', [1, 3, 5]);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
   relogio.definir(2026, 10, 13);
-  await t.atualizarDias('ana@x.com', hobby.id, [2, 4, 6]);
+  await t.atualizarDias('ana@x.com', habilidades.id, [2, 4, 6]);
 
   const atualizado = (await t.lerHobbies('ana@x.com'))[0];
   assert.equal(atualizado.configuracoes.length, 2);
@@ -262,22 +262,22 @@ test('sequência usa dias de calendário local ao atravessar a mudança de horá
   const arm = memoria();
   const relogio = relogioLocal(2026, 3, 8); // domingo da mudança de horário em America/New_York
   const t = criarTrilhas(arm, relogio.obter);
-  const hobby = await t.criarHobby('ana@x.com', 'Caminhada', [0]);
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  const habilidades = await t.criarHobby('ana@x.com', 'Caminhada', [0]);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
 
   relogio.definir(2026, 3, 15);
-  await t.registrarAtividade('ana@x.com', hobby.id);
+  await t.registrarAtividade('ana@x.com', habilidades.id);
   const atual = (await t.lerHobbies('ana@x.com'))[0];
   assert.equal(t.obterResumo(atual).sequenciaAtual, 2);
 });
 
-test('foto é associada ao hobby e dia, registra a prática uma vez e impede uma segunda foto diária', async () => {
+test('foto é associada ao habilidades e dia, registra a prática uma vez e impede uma segunda foto diária', async () => {
   const relogio = relogioLocal(2026, 10, 15); // quinta-feira
   const ambiente = criarAmbienteFotos(relogio);
-  const hobby = await ambiente.trilhas.criarHobby('ana@x.com', 'Fotografia', [4]);
-  await ambiente.trilhas.registrarAtividade('ana@x.com', hobby.id);
+  const habilidades = await ambiente.trilhas.criarHobby('ana@x.com', 'Fotografia', [4]);
+  await ambiente.trilhas.registrarAtividade('ana@x.com', habilidades.id);
 
-  const resultado = await ambiente.fotos.selecionarEAdicionar('ana@x.com', hobby.id);
+  const resultado = await ambiente.fotos.selecionarEAdicionar('ana@x.com', habilidades.id);
   let salvo = (await ambiente.trilhas.lerHobbies('ana@x.com'))[0];
   assert.equal(resultado.cancelada, false);
   assert.equal(salvo.fotos.length, 1);
@@ -290,25 +290,53 @@ test('foto é associada ao hobby e dia, registra a prática uma vez e impede uma
   assert.equal(restaurado.atividades.length, 1);
 
   await assert.rejects(
-    ambiente.fotos.selecionarEAdicionar('ana@x.com', hobby.id),
+    ambiente.fotos.selecionarEAdicionar('ana@x.com', habilidades.id),
     /já adicionou uma foto/,
   );
   assert.equal(ambiente.chamadasSeletor.length, 1);
 });
 
+test('foto selecionada no navegador fica guardada na trilha após reabrir o armazenamento', async () => {
+  const relogio = relogioLocal(2026, 10, 15);
+  const arm = memoria();
+  const trilhas = criarTrilhas(arm, relogio.obter);
+  const habilidades = await trilhas.criarHobby('ana@x.com', 'Fotografia', [4]);
+  const fotos = criarFotos({
+    trilhas,
+    fileSystem: { documentDirectory: null },
+    imagePicker: {
+      launchImageLibraryAsync: async (opcoes) => {
+        assert.equal(opcoes.base64, true);
+        return {
+          canceled: false,
+          assets: [{ uri: 'blob:foto-temporaria', mimeType: 'image/png', base64: 'aW1hZ2Vt' }],
+        };
+      },
+    },
+    mediaLibrary: {},
+    obterAgora: relogio.obter,
+  });
+
+  await fotos.selecionarEAdicionar('ana@x.com', habilidades.id);
+
+  const reaberto = criarTrilhas(arm, relogio.obter);
+  const restaurada = (await reaberto.lerHobbies('ana@x.com'))[0];
+  assert.match(restaurada.fotos[0].uri, /^data:image\/png;base64,aW1hZ2Vt$/);
+});
+
 test('limite de dez fotos exclui o arquivo antigo e mantém cópia independente e histórico', async () => {
   const relogio = relogioLocal(2026, 10, 1);
   const ambiente = criarAmbienteFotos(relogio);
-  const hobby = await ambiente.trilhas.criarHobby('ana@x.com', 'Desenho', [0, 1, 2, 3, 4, 5, 6]);
-  await ambiente.fotos.selecionarEAdicionar('ana@x.com', hobby.id);
+  const habilidades = await ambiente.trilhas.criarHobby('ana@x.com', 'Desenho', [0, 1, 2, 3, 4, 5, 6]);
+  await ambiente.fotos.selecionarEAdicionar('ana@x.com', habilidades.id);
   let salvo = (await ambiente.trilhas.lerHobbies('ana@x.com'))[0];
   const primeiraFoto = salvo.fotos[0];
-  await ambiente.fotos.salvarNaGaleria('ana@x.com', hobby.id, primeiraFoto.id);
+  await ambiente.fotos.salvarNaGaleria('ana@x.com', habilidades.id, primeiraFoto.id);
   const conteudoGaleria = ambiente.arquivosGaleria.get('asset-1');
 
   for (let dia = 2; dia <= 11; dia++) {
     relogio.definir(2026, 10, dia);
-    await ambiente.fotos.selecionarEAdicionar('ana@x.com', hobby.id);
+    await ambiente.fotos.selecionarEAdicionar('ana@x.com', habilidades.id);
   }
 
   salvo = (await ambiente.trilhas.lerHobbies('ana@x.com'))[0];
@@ -322,7 +350,7 @@ test('limite de dez fotos exclui o arquivo antigo e mantém cópia independente 
 
   relogio.definir(2026, 10, 1);
   await assert.rejects(
-    ambiente.fotos.selecionarEAdicionar('ana@x.com', hobby.id),
+    ambiente.fotos.selecionarEAdicionar('ana@x.com', habilidades.id),
     /já adicionou uma foto/,
     'a data continua marcada mesmo depois da exclusão da imagem local',
   );
@@ -331,12 +359,12 @@ test('limite de dez fotos exclui o arquivo antigo e mantém cópia independente 
 test('permissão negada ou falha da galeria é informada e não marca foto como salva', async () => {
   const relogio = relogioLocal(2026, 10, 15);
   const ambiente = criarAmbienteFotos(relogio, { permissaoGaleriaNegada: true });
-  const hobby = await ambiente.trilhas.criarHobby('ana@x.com', 'Leitura', [4]);
-  await ambiente.fotos.selecionarEAdicionar('ana@x.com', hobby.id);
+  const habilidades = await ambiente.trilhas.criarHobby('ana@x.com', 'Leitura', [4]);
+  await ambiente.fotos.selecionarEAdicionar('ana@x.com', habilidades.id);
   let salvo = (await ambiente.trilhas.lerHobbies('ana@x.com'))[0];
 
   await assert.rejects(
-    ambiente.fotos.salvarNaGaleria('ana@x.com', hobby.id, salvo.fotos[0].id),
+    ambiente.fotos.salvarNaGaleria('ana@x.com', habilidades.id, salvo.fotos[0].id),
     /Permita que o Evolua/,
   );
   salvo = (await ambiente.trilhas.lerHobbies('ana@x.com'))[0];
@@ -347,12 +375,12 @@ test('permissão negada ou falha da galeria é informada e não marca foto como 
 test('falha ao criar cópia na galeria não apresenta a foto como preservada', async () => {
   const relogio = relogioLocal(2026, 10, 15);
   const ambiente = criarAmbienteFotos(relogio, { falhaAoSalvarGaleria: true });
-  const hobby = await ambiente.trilhas.criarHobby('ana@x.com', 'Música', [4]);
-  await ambiente.fotos.selecionarEAdicionar('ana@x.com', hobby.id);
+  const habilidades = await ambiente.trilhas.criarHobby('ana@x.com', 'Música', [4]);
+  await ambiente.fotos.selecionarEAdicionar('ana@x.com', habilidades.id);
   const salvo = (await ambiente.trilhas.lerHobbies('ana@x.com'))[0];
 
   await assert.rejects(
-    ambiente.fotos.salvarNaGaleria('ana@x.com', hobby.id, salvo.fotos[0].id),
+    ambiente.fotos.salvarNaGaleria('ana@x.com', habilidades.id, salvo.fotos[0].id),
     /Falha simulada na galeria/,
   );
   const atualizado = (await ambiente.trilhas.lerHobbies('ana@x.com'))[0];
@@ -360,7 +388,7 @@ test('falha ao criar cópia na galeria não apresenta a foto como preservada', a
   assert.equal(atualizado.fotosPreservadas.length, 0);
 });
 
-test('criação de hobby valida nome e exige ao menos um dia planejado', async () => {
+test('criação de habilidades valida nome e exige ao menos um dia planejado', async () => {
   const t = criarTrilhas(memoria(), relogioLocal(2026, 10, 12).obter);
   await assert.rejects(t.criarHobby('ana@x.com', '  ', [1]), /nome/);
   await assert.rejects(t.criarHobby('ana@x.com', 'Desenho', []), /pelo menos um dia/);

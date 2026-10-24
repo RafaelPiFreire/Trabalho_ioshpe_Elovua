@@ -12,7 +12,7 @@ Aplicativo local-first para criar hobbies, acompanhar trilhas de progresso e reg
 - Manter até dez fotos recentes por hobby. Ao exceder o limite, a imagem mais antiga é removida do armazenamento local, sem apagar a etapa do histórico.
 - Salvar uma cópia independente na galeria do aparelho para preservar uma foto.
 
-Hobbies, configurações e progresso ficam salvos no aparelho com AsyncStorage. As fotos recentes ficam nos arquivos locais do aplicativo; não há servidor nem Firebase.
+Trilhas, configurações e progresso ficam salvos localmente com AsyncStorage. No Android e iOS, as fotos recentes ficam nos arquivos do aplicativo; na web, são compactadas e guardadas junto à trilha no armazenamento do navegador. Não há servidor nem Firebase. No navegador, os dados pertencem ao mesmo endereço e navegador usados para criar a trilha; limpar os dados do site pode apagá-los.
 
 ## Tecnologia
 

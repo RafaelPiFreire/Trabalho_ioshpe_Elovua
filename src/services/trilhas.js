@@ -31,13 +31,13 @@ function validarDias(dias) {
     && new Set(dias).size === dias.length;
 }
 
-function datasConcluidas(hobby) {
-  return new Set(hobby.atividades.map((atividade) => atividade.data));
+function datasConcluidas(habilidades) {
+  return new Set(habilidades.atividades.map((atividade) => atividade.data));
 }
 
-function configuracaoDaData(hobby, data) {
+function configuracaoDaData(habilidades, data) {
   let configuracao = null;
-  for (const revisao of hobby.configuracoes) {
+  for (const revisao of habilidades.configuracoes) {
     if (revisao.desde <= data && (!configuracao || revisao.desde >= configuracao.desde)) {
       configuracao = revisao;
     }
@@ -45,18 +45,18 @@ function configuracaoDaData(hobby, data) {
   return configuracao;
 }
 
-function diaPlanejado(hobby, data) {
-  const configuracao = configuracaoDaData(hobby, data);
+function diaPlanejado(habilidades, data) {
+  const configuracao = configuracaoDaData(habilidades, data);
   return Boolean(configuracao && configuracao.dias.includes(converterDataLocal(data).getDay()));
 }
 
-function calcularSequenciaAtual(hobby, hoje) {
-  const concluidas = datasConcluidas(hobby);
+function calcularSequenciaAtual(habilidades, hoje) {
+  const concluidas = datasConcluidas(habilidades);
   let sequencia = 0;
   let data = hoje;
 
-  while (data >= hobby.criadoEm) {
-    if (diaPlanejado(hobby, data)) {
+  while (data >= habilidades.criadoEm) {
+    if (diaPlanejado(habilidades, data)) {
       if (data === hoje && !concluidas.has(data)) {
         data = deslocarData(data, -1);
         continue;
@@ -70,13 +70,13 @@ function calcularSequenciaAtual(hobby, hoje) {
   return sequencia;
 }
 
-function calcularRecorde(hobby, hoje) {
-  const concluidas = datasConcluidas(hobby);
+function calcularRecorde(habilidades, hoje) {
+  const concluidas = datasConcluidas(habilidades);
   let sequencia = 0;
-  let recorde = hobby.recorde || 0;
+  let recorde = habilidades.recorde || 0;
 
-  for (let data = hobby.criadoEm; data <= hoje; data = deslocarData(data, 1)) {
-    if (!diaPlanejado(hobby, data)) continue;
+  for (let data = habilidades.criadoEm; data <= hoje; data = deslocarData(data, 1)) {
+    if (!diaPlanejado(habilidades, data)) continue;
     if (concluidas.has(data)) {
       sequencia += 1;
       recorde = Math.max(recorde, sequencia);
@@ -103,9 +103,9 @@ export function criarTrilhas(armazenamento, obterAgora = () => new Date()) {
     if (!bruto) return [];
     const hobbies = JSON.parse(bruto);
     if (!Array.isArray(hobbies)) throw new Error('Os dados das trilhas estão inválidos.');
-    hobbies.forEach((hobby) => {
-      if (!Array.isArray(hobby.fotos)) hobby.fotos = [];
-      if (!Array.isArray(hobby.fotosPreservadas)) hobby.fotosPreservadas = [];
+    hobbies.forEach((habilidades) => {
+      if (!Array.isArray(habilidades.fotos)) habilidades.fotos = [];
+      if (!Array.isArray(habilidades.fotosPreservadas)) habilidades.fotosPreservadas = [];
     });
     return hobbies;
   }
@@ -117,13 +117,13 @@ export function criarTrilhas(armazenamento, obterAgora = () => new Date()) {
   function criarHobby(email, nome, dias) {
     return alterarHobbies(email, (hobbies, hoje, agora) => {
       const nomeLimpo = String(nome || '').trim();
-      if (!nomeLimpo) throw new Error('Digite um nome para o hobby.');
+      if (!nomeLimpo) throw new Error('Digite um nome para o habilidades.');
       if (!validarDias(dias)) throw new Error('Escolha pelo menos um dia de prática.');
-      if (hobbies.some((hobby) => hobby.nome.toLocaleLowerCase() === nomeLimpo.toLocaleLowerCase())) {
-        throw new Error('Você já tem um hobby com esse nome.');
+      if (hobbies.some((habilidades) => habilidades.nome.toLocaleLowerCase() === nomeLimpo.toLocaleLowerCase())) {
+        throw new Error('Você já tem um habilidades com esse nome.');
       }
 
-      const hobby = {
+      const habilidades = {
         id: gerarId(agora),
         nome: nomeLimpo,
         criadoEm: hoje,
@@ -133,47 +133,47 @@ export function criarTrilhas(armazenamento, obterAgora = () => new Date()) {
         fotosPreservadas: [],
         recorde: 0,
       };
-      hobbies.push(hobby);
-      return hobby;
+      hobbies.push(habilidades);
+      return habilidades;
     });
   }
 
   function atualizarDias(email, id, dias) {
     return alterarHobbies(email, (hobbies, hoje, agora) => {
       if (!validarDias(dias)) throw new Error('Mantenha pelo menos um dia de prática selecionado.');
-      const hobby = hobbies.find((item) => item.id === id);
-      if (!hobby) throw new Error('Esse hobby não foi encontrado.');
+      const habilidades = hobbies.find((item) => item.id === id);
+      if (!habilidades) throw new Error('Esse habilidades não foi encontrado.');
 
       const diasOrdenados = [...dias].sort();
-      const atual = configuracaoDaData(hobby, hoje);
+      const atual = configuracaoDaData(habilidades, hoje);
       if (atual && atual.dias.length === diasOrdenados.length
-        && atual.dias.every((dia, indice) => dia === diasOrdenados[indice])) return hobby;
+        && atual.dias.every((dia, indice) => dia === diasOrdenados[indice])) return habilidades;
 
-      hobby.configuracoes.push({ desde: hoje, registradoEm: agora.toISOString(), dias: diasOrdenados });
-      hobby.recorde = calcularRecorde(hobby, hoje);
-      return hobby;
+      habilidades.configuracoes.push({ desde: hoje, registradoEm: agora.toISOString(), dias: diasOrdenados });
+      habilidades.recorde = calcularRecorde(habilidades, hoje);
+      return habilidades;
     });
   }
 
   function registrarAtividade(email, id) {
     return alterarHobbies(email, (hobbies, hoje, agora) => {
-      const hobby = hobbies.find((item) => item.id === id);
-      if (!hobby) throw new Error('Esse hobby não foi encontrado.');
+      const habilidades = hobbies.find((item) => item.id === id);
+      if (!habilidades) throw new Error('Esse habilidades não foi encontrado.');
 
-      hobby.atividades.push({ data: hoje, registradoEm: agora.toISOString() });
-      hobby.recorde = calcularRecorde(hobby, hoje);
-      return hobby;
+      habilidades.atividades.push({ data: hoje, registradoEm: agora.toISOString() });
+      habilidades.recorde = calcularRecorde(habilidades, hoje);
+      return habilidades;
     });
   }
 
   function adicionarFoto(email, id, uri) {
     return alterarHobbies(email, (hobbies, hoje, agora) => {
       if (typeof uri !== 'string' || !uri) throw new Error('A foto selecionada não tem um arquivo válido.');
-      const hobby = hobbies.find((item) => item.id === id);
-      if (!hobby) throw new Error('Esse hobby não foi encontrado.');
-      const atividadeDoDia = hobby.atividades.find((atividade) => atividade.data === hoje);
-      if (hobby.fotos.some((foto) => foto.data === hoje) || atividadeDoDia?.fotoRegistrada) {
-        throw new Error('Você já adicionou uma foto para este hobby hoje.');
+      const habilidades = hobbies.find((item) => item.id === id);
+      if (!habilidades) throw new Error('Esse habilidades não foi encontrado.');
+      const atividadeDoDia = habilidades.atividades.find((atividade) => atividade.data === hoje);
+      if (habilidades.fotos.some((foto) => foto.data === hoje) || atividadeDoDia?.fotoRegistrada) {
+        throw new Error('Você já adicionou uma foto para este habilidades hoje.');
       }
 
       const foto = {
@@ -183,20 +183,20 @@ export function criarTrilhas(armazenamento, obterAgora = () => new Date()) {
         uri,
         galeria: null,
       };
-      hobby.fotos.push(foto);
-      hobby.fotos.sort((a, b) => a.data.localeCompare(b.data));
-      const removidas = hobby.fotos.splice(
+      habilidades.fotos.push(foto);
+      habilidades.fotos.sort((a, b) => a.data.localeCompare(b.data));
+      const removidas = habilidades.fotos.splice(
         0,
-        Math.max(0, hobby.fotos.length - LIMITE_FOTOS_POR_TRILHA),
+        Math.max(0, habilidades.fotos.length - LIMITE_FOTOS_POR_TRILHA),
       );
 
       if (atividadeDoDia) {
         atividadeDoDia.fotoRegistrada = true;
       } else {
-        hobby.atividades.push({ data: hoje, registradoEm: agora.toISOString(), fotoRegistrada: true });
+        habilidades.atividades.push({ data: hoje, registradoEm: agora.toISOString(), fotoRegistrada: true });
       }
-      hobby.recorde = calcularRecorde(hobby, hoje);
-      return { hobby, fotosRemovidas: removidas };
+      habilidades.recorde = calcularRecorde(habilidades, hoje);
+      return { habilidades, fotosRemovidas: removidas };
     });
   }
 
@@ -205,9 +205,9 @@ export function criarTrilhas(armazenamento, obterAgora = () => new Date()) {
       if (!asset || typeof asset.id !== 'string' || !asset.id) {
         throw new Error('A galeria não retornou uma identificação para a foto salva.');
       }
-      const hobby = hobbies.find((item) => item.id === hobbyId);
-      if (!hobby) throw new Error('Esse hobby não foi encontrado.');
-      const foto = hobby.fotos.find((item) => item.id === fotoId);
+      const habilidades = hobbies.find((item) => item.id === hobbyId);
+      if (!habilidades) throw new Error('Esse habilidades não foi encontrado.');
+      const foto = habilidades.fotos.find((item) => item.id === fotoId);
       if (!foto) throw new Error('Essa foto não está mais entre as fotos recentes.');
       if (foto.galeria) return foto;
 
@@ -217,7 +217,7 @@ export function criarTrilhas(armazenamento, obterAgora = () => new Date()) {
         nomeArquivo: asset.filename || null,
         salvaEm: agora.toISOString(),
       };
-      hobby.fotosPreservadas.push({
+      habilidades.fotosPreservadas.push({
         fotoId: foto.id,
         data: foto.data,
         assetId: foto.galeria.assetId,
@@ -238,16 +238,16 @@ export function criarTrilhas(armazenamento, obterAgora = () => new Date()) {
     return resultado;
   }
 
-  function obterResumo(hobby, data = obterAgora()) {
+  function obterResumo(habilidades, data = obterAgora()) {
     const hoje = formatarDataLocal(data);
-    const config = configuracaoDaData(hobby, hoje);
+    const config = configuracaoDaData(habilidades, hoje);
     const dia = converterDataLocal(hoje).getDay();
     return {
       data: hoje,
-      sequenciaAtual: calcularSequenciaAtual(hobby, hoje),
-      recorde: hobby.recorde || calcularRecorde(hobby, hoje),
+      sequenciaAtual: calcularSequenciaAtual(habilidades, hoje),
+      recorde: habilidades.recorde || calcularRecorde(habilidades, hoje),
       praticaPlanejadaHoje: Boolean(config && config.dias.includes(dia)),
-      quantidadeHoje: hobby.atividades.filter((atividade) => atividade.data === hoje).length,
+      quantidadeHoje: habilidades.atividades.filter((atividade) => atividade.data === hoje).length,
       diasPlanejados: config ? config.dias : [],
     };
   }
